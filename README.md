@@ -4,7 +4,7 @@
 
 ##Demo
 
-Demo URL: https://video-hub-c94f7.firebaseapp.com
+[Demo](https://video-hub-c94f7.firebaseapp.com)
 
 ## About
 
