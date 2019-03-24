@@ -1,0 +1,112 @@
+<div class="columns-container">
+  <ul class="column">
+    <li *ngFor="let item of oneWordTags | tagFilterPipe: currentFiltering">
+      <span class="prefix">
+        {{ item.word | alphabetPrefixPipe }}
+      </span>
+      <span
+        (click)="tagWasClicked(item.word)"
+        [ngClass]="{ strikethrough: editMode }"
+        class="clickable"
+      >
+        {{ item.word }}
+      </span>
+      <span class="frequency">
+        {{ item.freq }}
+      </span>
+      <app-icon
+        *ngIf="editMode"
+        [icon]="'icon-close'"
+        class="icon-lol"
+        @tagDeleteButton
+      ></app-icon>
+    </li>
+  </ul>
+
+  <ul class="column">
+    <li *ngFor="let item of twoWordTags | tagFilterPipe: currentFiltering" class="capitalize">
+      <span class="prefix">
+        {{ item.word | alphabetPrefixPipe }}
+      </span>
+      <span
+        (click)="tagWasClicked(item.word)"
+        [ngClass]="{ strikethrough: editMode }"
+        class="clickable"
+      >
+        {{ item.word }}
+      </span>
+      <span class="frequency">
+        {{ item.freq }}
+      </span>
+      <app-icon
+        *ngIf="editMode"
+        class="icon-lol"
+        [icon]="'icon-close'"
+        @tagDeleteButton
+      ></app-icon>
+    </li>
+  </ul>
+</div>
+
+<div
+  *ngIf="showEdit"
+  class="edit-bar"
+  @slowFadeIn
+>
+
+<div class="col1">
+  <button
+    class="wizardButton"
+    [ngClass]="{ editModeActive: editMode }"
+    (click)="startEditMode()"
+  >
+    {{ 'TAGS.delete' | translate }}
+  </button>
+</div>
+
+<div class="col2">
+  <input
+    #filterInput
+    [(ngModel)]="currentFiltering"
+    class="inputFilter"
+    type="text"
+  >
+
+  <span class="numFound">
+    {{ 'TAGS.filterList' | translate }}
+  </span>
+</div>
+
+<div class="col3">
+  <input
+    #addInput
+    (keyup.enter)="addThisTag()"
+    [(ngModel)]="currentAdding"
+    class="inputFilter inputAdd"
+    type="text"
+  >
+
+  <span
+    *ngIf="!showingStatusMessage"
+    class="numFound alignLeft"
+    @donutAppear
+  >
+    {{ currentAdding | tagMatchPipe }}
+  </span>
+  <span
+    *ngIf="showingStatusMessage"
+    class="numFound add-error alignLeft"
+    @donutAppear
+  >
+    {{ statusMessage | translate }}
+  </span>
+
+  <button
+    (click)="addThisTag()"
+    class="wizardButton addButton"
+  >
+    {{ 'TAGS.add' | translate }}
+  </button>
+</div>
+
+</div>

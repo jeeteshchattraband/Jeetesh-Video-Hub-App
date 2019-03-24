@@ -1,0 +1,72 @@
+<div class="statistics">
+
+  <span class="stats-heading">{{ 'STATISTICS.heading' | translate }}</span>
+
+  <span class="stats-heading title">{{ hubName }}</span>
+  <span class="stats-heading folder" [innerHtml]="pathToVhaFile | folderArrowsPipe"></span>
+
+  <table class="stats-table">
+    <tr>
+      <td colSpan=2 class="spanBoth">{{ 'STATISTICS.general' | translate }}</td>
+    </tr>
+    <tr>
+      <td>{{ 'STATISTICS.numOfFiles' | translate }}</td>
+      <td class="rightCol">{{ totalFiles }}</td>
+    </tr>
+
+    <tr>
+      <td>{{ 'STATISTICS.numOfFolders' | translate }}</td>
+      <td class="rightCol">{{ numFolders }}</td>
+    </tr>
+
+    <tr>
+      <td colSpan=2 class="spanBoth">{{ 'STATISTICS.videoLengths' | translate }}</td>
+    </tr>
+
+    <tr>
+      <td>{{ 'STATISTICS.shortest' | translate }}</td>
+      <td class="rightCol">{{ shortest | lengthPipe : true }}</td>
+    </tr>
+
+    <tr>
+      <td>{{ 'STATISTICS.longest' | translate }}</td>
+      <td class="rightCol">{{ longest | lengthPipe : true : true }}</td>
+    </tr>
+
+    <tr>
+      <td>{{ 'STATISTICS.total' | translate : true }}</td>
+      <td class="rightCol">{{ totalLength | lengthPipe : true : true }}</td>
+    </tr>
+
+    <tr>
+      <td>{{ 'STATISTICS.average' | translate }}</td>
+      <td class="rightCol">{{ avgLength | lengthPipe : true }}</td>
+    </tr>
+
+    <tr>
+      <td colSpan=2 class="spanBoth">{{ 'STATISTICS.fileSizes' | translate }}</td>
+    </tr>
+
+    <tr>
+      <td>{{ 'STATISTICS.smallest' | translate }}</td>
+      <td class="rightCol">{{ smallest | fileSizePipe : true }}</td>
+    </tr>
+
+    <tr>
+      <td>{{ 'STATISTICS.largest' | translate }}</td>
+      <td class="rightCol">{{ largest | fileSizePipe : true }}</td>
+    </tr>
+
+    <tr>
+      <td>{{ 'STATISTICS.total' | translate }}</td>
+      <td class="rightCol">{{ totalSize | fileSizePipe : true }}</td>
+    </tr>
+
+    <tr>
+      <td>{{ 'STATISTICS.average' | translate }}</td>
+      <td class="rightCol">{{ avgSize | fileSizePipe : true }}</td>
+    </tr>
+
+  </table>
+
+</div>

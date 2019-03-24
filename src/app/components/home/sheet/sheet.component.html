@@ -1,0 +1,82 @@
+<div
+  class="sheet-modal"
+>
+<app-meta-item
+  class="meta"
+  (editFinalArrayStars)="editFinalArrayStars.emit($event)"
+  (editFinalArrayTag)="editFinalArrayTag.emit($event)"
+  (editFinalArrayYear)="editFinalArrayYear.emit($event)"
+  (filterTag)="filterTag.emit($event)"
+
+  [video]="video"
+
+  [imgHeight]="imgHeight"
+
+  [star]="this.star"
+
+  [darkMode]="darkMode"
+  [largerFont]="largerFont"
+  [showMeta]="showMeta"
+  [showManualTags]="showManualTags"
+  [showAutoFileTags]="showAutoFileTags"
+  [showAutoFolderTags]="showAutoFolderTags"
+></app-meta-item>
+
+
+  <div class="zoomButtons">
+
+    <button
+      (click)="decreaseZoomLevel()"
+      class="defaultSettingsButton"
+    >
+      <app-icon [icon]="'icon-minus'"></app-icon>
+    </button>
+
+    <button
+      (click)="resetZoomLevel()"
+      class="defaultSettingsButton reset-button"
+    >
+      <span>{{ 'SETTINGS.reset' | translate }}</span>
+    </button>
+
+    <button
+      (click)="increaseZoomLevel()"
+      class="defaultSettingsButton"
+    >
+      <app-icon [icon]="'icon-plus'"></app-icon>
+    </button>
+
+  </div>
+
+  <ng-container
+    *ngFor="let _ of ' '.repeat(video.screens).split(''); index as i"
+  >
+    <div
+      [ngStyle]="{
+          height: 'calc((72vw / ' + thumbnailsToDisplay + ') * (9 / 16))',
+          width: 'calc(72vw / ' + thumbnailsToDisplay + ')',
+          padding: 'calc(2% / ' + thumbnailsToDisplay + ')'
+        }"
+      class="filmstrip-container"
+      @galleryItemAppear
+    >
+      <div
+        #filmstripHolder
+        class="video-box"
+        [ngStyle]="{
+            height: '100%',
+            'background-image': 'url(' + fullFilePath + ')',
+            'background-position-x': (percentOffset * i) + '%'
+          }"
+      >
+      <span
+        *ngIf="showMeta"
+        class="time"
+        @metaAppear
+      >
+        {{ (video.duration / video.screens) * (i+1) | lengthPipe }}
+      </span>
+      </div>
+    </div>
+  </ng-container>
+</div>

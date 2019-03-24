@@ -1,0 +1,55 @@
+<div
+  [ngStyle]="{
+      height: elHeight + 'px',
+      width: elWidth + 'px'
+    }"
+  class="filmstrip-container"
+>
+
+<div
+  class="video-box"
+  [ngStyle]="{ height: imgHeight + 'px' }"
+>
+
+  <span *ngIf="showMeta" class="time">{{ video.durationDisplay }}</span>
+  <span *ngIf="showMeta" class="rez">{{ video.resolution }}</span>
+
+  <video
+    *ngIf="noError && !autoplay"
+    [src]="'file://' + folderPath + '/' + pathToVideo"
+    [poster]="sanitizer.bypassSecurityTrustUrl('file://' + folderPath + '/' + poster)"
+    [ngStyle]="{ 'height': imgHeight + 'px' }"
+    class="screencap"
+    onmouseover="this.play().catch((err) => {this.load()})"
+    onmouseout="this.pause()"
+    loop
+  ></video>
+
+  <video
+    *ngIf="noError && autoplay"
+    [src]="'file://' + folderPath + '/' + pathToVideo"
+    [poster]="sanitizer.bypassSecurityTrustUrl('file://' + folderPath + '/' + poster)"
+    [ngStyle]="{ 'height': imgHeight + 'px' }"
+    class="screencap"
+    onmouseover="this.muted = false;"
+    onmouseout="this.muted = true;"
+    onloadstart="this.muted = true;"
+    loop
+    autoplay
+  ></video>
+
+</div>
+
+<span
+  *ngIf="showMeta"
+  [ngClass]="{ 'larger-font': largerFont }"
+  [ngStyle]="{ color: darkMode ? '#BBBBBB' : '#000000' }"
+  class="title"
+>
+  {{ video.cleanName }}
+  <div class="fileSize" *ngIf="showMeta">
+    {{ showMeta ? '(' + video.fileSizeDisplay + ')' : '' }}
+  </div>
+</span>
+
+</div>

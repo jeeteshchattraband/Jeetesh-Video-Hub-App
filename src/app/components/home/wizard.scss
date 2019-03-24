@@ -1,0 +1,255 @@
+@import "variables";
+
+.wizard {
+  background: $gray-10;
+  height: 100vh;
+  overflow-y: scroll;
+  padding-top: 30px;
+  position: fixed;
+  top: 20px; // accounts for draggable region
+  width: 100%;
+  z-index: 30;
+  height: calc(100vh - 50px);
+
+
+  h1 {
+    font-size: 14px;
+    color: $gray-60;
+  }
+
+  span {
+    display: block;
+    font-size: 12px;
+  }
+
+  .closeWizard {
+    cursor: pointer;
+    float: right;
+    position: sticky;
+    right: 15px;
+    top: 0;
+    transition-duration: 300ms;
+
+    &:hover {
+      color: #990000;
+      transition-duration: 300ms;
+    }
+  }
+
+  .left-side {
+    box-sizing: border-box;
+    float: left;
+    margin: 50px;
+    min-height: 250px;
+    min-width: 200px;
+    width: calc(40vw - 100px);
+  }
+
+  .right-side {
+    border-left: 1px solid $gray-20;
+    // box-sizing: border-box;
+    float: left;
+    // max-width: 60vw;
+    width: calc(50vw - 100px);
+    min-height: calc(100vh - 180px);
+    min-width: 300px;
+    padding: 50px;
+  }
+
+  .steps {
+    background-color: #c5c5c5;
+    border-radius: 9px;
+    box-shadow: 0px 0px 5px 1px rgba(0,0,0,0.07);
+    color: $white;
+    font-size: 9px;
+    height: 18px;
+    line-height: 18px;
+    pointer-events: none;
+    position: absolute;
+    text-align: center;
+    transform: translate(-24px, 24px);
+    transition: 300ms;
+    width: 18px;
+  }
+
+  .fulfilled {
+    background-color: #8ab76c;
+  }
+
+  .current-step {
+    background-color: #ff7777;
+    transition: 300ms;
+  }
+
+  .description {
+    color: $gray-50;
+    margin-bottom: 10px;
+    pointer-events: none;
+  }
+
+  .clear-history {
+    color: $gray-50;
+    cursor: pointer;
+    font-style: italic;
+    margin: 20px 0 0 20px;
+  }
+
+  .recently-opened-wizard {
+    color: $gray-70;
+    display: block;
+    font-size: 12px;
+    margin: 0 0 20px 0;
+
+    ul {
+      margin: 15px 0 0 20px;
+      padding: 0;
+
+      li {
+        cursor: pointer;
+        list-style: none;
+        margin-bottom: 12px;
+        word-wrap: break-word;
+
+        .history-name {
+          display: inline-block !important;
+          font-size: 14px !important;
+          transform: translate(-9px, -5px);
+          transition-property: text-shadow;
+          transition: 300ms;
+        }
+
+        &:hover {
+          .history-name {
+            color: #ff7777;
+            text-shadow: 0px 0px 3px rgba(255, 255, 255, 0.5);
+            transition-property: text-shadow;
+            transition: 300ms;
+          }
+        }
+
+        .clear-history-item {
+          position: absolute;
+          transform: translate(-32px, 3px);
+          transition-property: color;
+          transition: 300ms;
+
+          &:hover {
+            color: red;
+          }
+
+          &:before {
+            font-size: 12px;
+          }
+        }
+
+        span {
+          padding-left: 10px;
+          font-style: italic;
+        }
+      }
+    }
+  }
+
+  .screenshot-preview {
+    align-items: center;
+    background-color: #c7dabb;
+    border: 1px solid $gray-50;
+    display: flex;
+    font-size: 12px;
+    justify-content: center;
+    position: absolute;
+    text-align: center;
+    transition: 300ms;
+    transition-property: width, height;
+    transform: translate(260px, -56px);
+  }
+
+  .path {
+    pointer-events: none;
+    color: black;
+    min-height: 20px;
+    margin-left: 26px;
+  }
+
+  .recent {
+    color: $gray-50;
+    font-style: normal !important;
+    margin-left: 0;
+    padding-top: 5px;
+  }
+
+  .step-description {
+    pointer-events: none;
+    color: $gray-60;
+    min-height: 20px;
+    margin-left: 16px;
+  }
+
+  .emphasis-number {
+    display: inline;
+    font-size: 14px;
+    font-weight: bold;
+  }
+
+  .size-dropdown {
+    &:not([disabled]) {
+      cursor: pointer;
+    }
+    margin: 18px 14px 14px;
+  }
+
+  @include scrollBarHidden;
+}
+
+.disabled-overlay {
+  background: rgba(0, 0, 0, 0.2);
+  height: 100vh;
+  left: 0;
+  position: fixed;
+  top: 20px;
+  width: 100%;
+  z-index: 100;
+}
+
+.hub-name-input {
+  margin-top: 16px;
+  padding-left: 5px;
+  margin-left: 15px;
+}
+
+.history-icon {
+  transform: translate(-7px, 1px);
+  width: 18px;
+}
+
+@media (max-width: 760px) {
+
+  .wizard {
+    margin: 0;
+
+    @include scrollBarShown;
+  }
+
+  .left-side {
+    min-height: initial !important;
+    width: calc(100vw - 100px) !important;
+  }
+
+  .right-side {
+    border-left: 0 !important;
+    border-top: 1px solid $gray-20;
+    margin-bottom: 100px;
+    margin-left: 20px;
+    min-width: calc(100vw - 150px) !important;
+    width: calc(100vw - 150px) !important;
+    min-height: initial !important;
+
+    & > * {
+      transform: translate(-20px, 0);
+    }
+
+    & .steps {
+      transform: translate(-48px, 24px);
+    }
+  }
+}

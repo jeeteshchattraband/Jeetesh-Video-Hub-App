@@ -1,0 +1,85 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Video Hub App</title>
+  <base href="">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <style>
+    body {
+      background-color: #eeeeee;
+    }
+
+    .spinner {
+      position: fixed;
+      top: calc(50vh + 50px);
+      left: calc(50vw - 25px);
+      width: 50px;
+      height: 40px;
+      text-align: center;
+      font-size: 10px;
+    }
+
+    .spinner > div {
+      background-color: #BBBBBB;
+      box-shadow: inset 0 0 1px rgba(0, 0, 0, 0.2);
+      display: inline-block;
+      height: 100%;
+      width: 6px;
+      animation: sk-stretchdelay 1.2s infinite ease-in-out;
+    }
+
+    .spinner .rect2 {
+      animation-delay: -1.1s;
+    }
+
+    .spinner .rect3 {
+      animation-delay: -1.0s;
+    }
+
+    .spinner .rect4 {
+      animation-delay: -0.9s;
+    }
+
+    .spinner .rect5 {
+      animation-delay: -0.8s;
+    }
+
+    @-webkit-keyframes sk-stretchdelay {
+      0%, 40%, 100% { -webkit-transform: scaleY(0.4) }  
+      20% { -webkit-transform: scaleY(1.0) }
+    }
+
+    @keyframes sk-stretchdelay {
+      0%, 40%, 100% { 
+        transform: scaleY(0.4);
+        -webkit-transform: scaleY(0.4);
+      }  20% { 
+        transform: scaleY(1.0);
+        -webkit-transform: scaleY(1.0);
+      }
+    }
+
+    .logo {
+      height: 100px;
+      left: calc(50vw - 50px);
+      position: fixed;
+      top: calc(50vh - 50px);
+      width: 100px;
+    }
+  </style>
+<link rel="stylesheet" href="styles.d5e9278f7a5a067f4410.css"></head>
+<body>
+  <app-root>
+    <img src='./assets/favicon.png' class="logo">
+    <div class="spinner">
+      <div class="rect1"></div>
+      <div class="rect2"></div>
+      <div class="rect3"></div>
+      <div class="rect4"></div>
+      <div class="rect5"></div>
+    </div>
+  </app-root>
+<script type="text/javascript" src="runtime.26209474bfa8dc87a77c.js"></script><script type="text/javascript" src="polyfills.cc9807c1acdb60e09b1c.js"></script><script type="text/javascript" src="main.cc08d18fffa2165cf9da.js"></script></body>
+</html>

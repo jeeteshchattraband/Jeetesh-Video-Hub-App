@@ -1,0 +1,33 @@
+<div
+  class="meta-container"
+  [ngStyle]="{ height: elHeight + 'px'}"
+>
+
+  <div
+    #filmstripHolder
+    (mousemove)="updateFilmXoffset($event)"
+    class="filmstrip-container"
+    [ngStyle]="{
+        height: imgHeight + 'px',
+        'background-image': 'url(' + fullFilePath + ')',
+        'background-position-x': '-' + filmXoffset + 'px',
+        'background-size': 'auto ' + imgHeight + 'px'
+      }"
+  >
+    <span *ngIf="showMeta" class="time">{{ video.durationDisplay }}</span>
+    <span *ngIf="showMeta" class="rez">{{ video.resolution }}</span>
+  </div>
+
+  <span
+    *ngIf="showMeta"
+    [ngClass]="{ 'larger-font': largerFont }"
+    [ngStyle]="{ color: darkMode ? '#BBBBBB' : '#000000' }"
+    class="title"
+  >
+    {{ video.cleanName }}
+    <div class="fileSize" *ngIf="showMeta">
+      ({{ video.fileSizeDisplay }})
+    </div>
+  </span>
+
+</div>

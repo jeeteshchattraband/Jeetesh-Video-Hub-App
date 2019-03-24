@@ -1,0 +1,58 @@
+{
+  "productName": "Video Hub App",
+  "directories": {
+    "output": "release/"
+  },
+  "files": [
+    "**/*",
+    "!**/*.ts",
+    "!*.code-workspace",
+    "!LICENSE.md",
+    "!package.json",
+    "!package-lock.json",
+    "!src/",
+    "!e2e/",
+    "!hooks/",
+    "!angular.json",
+    "!_config.yml",
+    "!karma.conf.js",
+    "!tsconfig.json",
+    "!tslint.json"
+  ],
+  "win": {
+    "icon": "dist/favicon",
+    "asar": true,
+    "asarUnpack": [
+      "../node_modules/@ffmpeg-installer",
+      "../node_modules/@ffprobe-installer"
+    ],
+    "target": [
+      "nsis"
+    ]
+  },
+  "mac": {
+    "category": "public.app-category.video",
+    "target": "dmg",
+    "icon": "src/assets/icons.icns",
+    "asar": true,
+    "asarUnpack": [
+      "../node_modules/@ffmpeg-installer",
+      "../node_modules/@ffprobe-installer"
+    ]
+  },
+  "linux": {
+    "icon": "src/assets/icons.icns",
+    "target": [
+      "AppImage"
+    ]
+  },
+  "nsis": {
+    "oneClick": false,
+    "perMachine": true
+  },
+  "fileAssociations": {
+    "ext": "vha",
+    "name": "Video Hub App file",
+    "role": "Editor"
+  }
+}

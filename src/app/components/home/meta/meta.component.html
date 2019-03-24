@@ -1,0 +1,93 @@
+<div
+  class="meta"
+  [ngStyle]="{ height: imgHeight + 'px' }"
+>
+  <span
+    [ngClass]="{ 'larger-font': largerFont }"
+    [ngStyle]="{ color: darkMode ? '#BBBBBB' : '#000000' }"
+    class="title"
+  >
+    {{ video.cleanName }}
+  </span>
+  <span class="fileSize">
+    {{ video.durationDisplay }}
+
+    | {{ video.width }} x {{ video.height }}
+
+    | {{ video.fileSizeDisplay }}
+
+    | <input
+        #yearInput
+        (change)="validateYear($event)"
+        (click)="autoFillYear($event)"
+        (keydown)="preventUnwantedKeypress($event)"
+        (keyup.enter)="validateYear($event)"
+        (keyup.esc)="validateYear($event)"
+        [(ngModel)]="yearHack"
+        class="year"
+        max="3000"
+        min="1800"
+        placeholder="YYYY"
+        type="number"
+      >
+
+    </span>
+  <span class="fileSize" *ngIf="video.timesPlayed">
+    {{ 'TAGS.timesPlayed' | translate }}: {{ video.timesPlayed }}
+  </span>
+
+  <button
+    (click)="setStarRating(1.5)"
+    class="star-rating"
+    [ngClass]="{ 'star-lit': starRatingHack > 1 }"
+    tabindex="-1"
+  >
+    <app-icon [icon]="'icon-star'"></app-icon>
+  </button>
+  <button
+    (click)="setStarRating(2.5)"
+    class="star-rating"
+    [ngClass]="{ 'star-lit': starRatingHack > 2 }"
+    tabindex="-1"
+  >
+    <app-icon [icon]="'icon-star'"></app-icon>
+  </button>
+  <button
+    (click)="setStarRating(3.5)"
+    class="star-rating"
+    [ngClass]="{ 'star-lit': starRatingHack > 3 }"
+    tabindex="-1"
+  >
+    <app-icon [icon]="'icon-star'"></app-icon>
+  </button>
+  <button
+    (click)="setStarRating(4.5)"
+    class="star-rating"
+    [ngClass]="{ 'star-lit': starRatingHack > 4 }"
+    tabindex="-1"
+  >
+    <app-icon [icon]="'icon-star'"></app-icon>
+  </button>
+  <button
+    (click)="setStarRating(5.5)"
+    class="star-rating"
+    [ngClass]="{ 'star-lit': starRatingHack > 5 }"
+    tabindex="-1"
+  >
+    <app-icon [icon]="'icon-star'"></app-icon>
+  </button>
+
+  <app-add-tag-component
+    (tag)="addThisTag($event)"
+  ></app-add-tag-component>
+
+  <!-- HACK for now -->
+  <br><br><br>
+
+  <app-view-tags-component
+    [tags]="tagsService.getTags(this.video, this.showManualTags, this.showAutoFileTags, this.showAutoFolderTags, this.video.tags)"
+    (tagClicked)="filterThisTag($event)"
+    (removeTagEmit)="removeThisTag($event)"
+  ></app-view-tags-component>
+
+</div>

@@ -1,0 +1,133 @@
+@import "../variables";
+
+.sheet-modal {
+  background: $gray-30;
+  border-radius: 10px;
+  border: 1px solid $gray-50;
+  box-shadow: 0 3px 7px 3px rgba(0, 0, 0, 0.3);
+  box-sizing: border-box;
+  height: 80vh;
+  left: 10vw;
+  overflow-y: scroll;
+  padding: 2%;
+  position: fixed;
+  top: 10%;
+  width: calc(80vw + 10px);
+  z-index: 30;
+
+  // Consider making larger
+  // Will need to add a `close` button if made bigger
+  // top: 4vh;
+  // left: 2vw;
+  // height: 94vh;
+  // width: calc(95vw + 10px);
+
+  @include scrollBar;
+}
+
+.zoomButtons {
+  position: absolute;
+  top: 40px;
+  right: 40px;
+}
+
+.meta {
+  box-sizing: border-box;
+  display: inline-block;
+  height: 180px;
+  vertical-align: top;
+  width: 100%;
+}
+
+.filmstrip-container {
+  display: inline-block;
+  overflow: hidden;
+  padding: 9px;
+  position: relative;
+  transition-property: height;
+  transition: 300ms;
+}
+
+.video-box {
+  background-color: black;
+  background-size: cover;
+  box-shadow: 2px 2px 7px rgba(0,0,0,0.2);
+  cursor: pointer;
+  overflow: hidden;
+  position: relative;
+}
+
+.time, .rez {
+  bottom: 4px;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 10px;
+  position: absolute;
+  z-index: 2;
+}
+
+.time {
+  right: 4px;
+}
+
+.rez {
+  left: 3px;
+}
+
+.title {
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  cursor: pointer;
+  display: -webkit-box;
+  font-size: 12px;
+  margin: 6px 2px 0px;
+  max-height: 54px;
+  overflow: hidden;
+  position: absolute;
+  text-align: left;
+  text-overflow: ellipsis;
+  transition-property: font-size;
+  transition: 300ms;
+  width: 100%;
+  word-wrap: break-word;
+}
+
+.fileSize {
+  display: inline-block;
+  font-size: 10px;
+  opacity: 0.8;
+}
+
+.larger-font {
+  font-size: 16px;
+  margin-top: 4px;
+}
+
+.reset-button {
+  margin: 0 10px;
+  max-width: initial;
+  padding: 0 10px;
+  transform: translate(0, -3px);
+}
+
+.fileSize {
+  display: block;
+  font-size: 10px;
+  margin: 5px 0;
+  opacity: 0.8;
+}
+
+.star-rating {
+  background-color: transparent;
+  background-image: url("./../../../../assets/logo.png");
+  background-size: 20px 20px;
+  border: 0;
+  cursor: pointer;
+  height: 20px;
+  margin: 3px;
+  opacity: 0.3;
+  width: 20px;
+}
+
+.star-lit {
+  opacity: 1;
+}

@@ -1,0 +1,43 @@
+<div
+  [ngStyle]="{ height: elHeight + 'px' }"
+  class="filmstrip-container"
+>
+
+  <div
+    #filmstripHolder
+    class="video-box"
+    (mousemove)="mouseIsMoving($event)"
+    (mouseenter)="mouseEnter()"
+    (mouseleave)="mouseLeave()"
+    (click)="mouseClick()"
+    [ngStyle]="{
+        height: imgHeight + 'px',
+        width: elWidth + 'px',
+        'max-width': elWidth + 'px',
+        'background-image': 'url(' + (hover ? fullFilePath : firstFilePath) + ')',
+        'background-position-x': percentOffset + '%'
+      }"
+  >
+  </div>
+
+  <app-meta-item
+    (editFinalArrayStars)="editFinalArrayStars.emit($event)"
+    (editFinalArrayTag)="editFinalArrayTag.emit($event)"
+    (editFinalArrayYear)="editFinalArrayYear.emit($event)"
+    (filterTag)="filterTag.emit($event)"
+
+    [video]="video"
+
+    [imgHeight]="imgHeight"
+
+    [star]="this.star"
+
+    [darkMode]="darkMode"
+    [largerFont]="largerFont"
+    [showMeta]="showMeta"
+    [showManualTags]="showManualTags"
+    [showAutoFileTags]="showAutoFileTags"
+    [showAutoFolderTags]="showAutoFolderTags"
+  ></app-meta-item>
+
+</div>

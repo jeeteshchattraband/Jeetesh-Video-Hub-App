@@ -1,0 +1,1614 @@
+import { Component, ChangeDetectorRef, OnInit, HostListener, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
+
+import { TranslateService } from '@ngx-translate/core';
+import { VirtualScrollerComponent } from 'ngx-virtual-scroller';
+
+import { AutoTagsSaveService } from './tags/tags-save.service';
+import { ElectronService } from '../../providers/electron.service';
+import { ManualTagsService } from './manual-tags/manual-tags.service';
+import { ResolutionFilterService, ResolutionString } from '../../components/pipes/resolution-filter.service';
+import { ShowLimitService } from '../../components/pipes/show-limit.service';
+import { StarFilterService } from '../pipes/star-filter.service';
+import { WordFrequencyService } from '../../components/pipes/word-frequency.service';
+
+import { FinalObject, ImageElement } from '../common/final-object.interface';
+import { HistoryItem } from '../common/history-item.interface';
+import { ImportSettingsObject } from '../common/import.interface';
+import { SavableProperties } from '../common/savable-properties.interface';
+import { SettingsObject } from '../common/settings-object.interface';
+import { SortType } from '../pipes/sorting.pipe';
+import { TagEmission, StarEmission, YearEmission } from './details/details.component';
+import { WizardOptions } from '../common/wizard-options.interface';
+
+import { AppState, SupportedLanguage, defaultHeights, ImageHeights, allSupportedViews, SupportedView } from '../common/app-state';
+import { Filters, filterKeyToIndex, FilterKeyNames } from '../common/filters';
+import { SettingsButtons, SettingsButtonsGroups, SettingsMetaGroupLabels, SettingsMetaGroup } from '../common/settings-buttons';
+
+import { English } from '../../i18n/en';
+import { French } from '../../i18n/fr';
+import { Russian } from '../../i18n/ru';
+
+import { globals } from '../../../../main-globals';
+
+import {
+  donutAppear,
+  filterItemAppear,
+  galleryItemAppear,
+  historyItemRemove,
+  modalAnimation,
+  myWizardAnimation,
+  overlayAppear,
+  rightClickAnimation,
+  rightClickContentAnimation,
+  slowFadeIn,
+  slowFadeOut,
+  topAnimation
+} from '../common/animations';
+
+// import { DemoContent } from '../../../assets/demo-content';
+
+@Component({
+  selector: 'app-home',
+  templateUrl: './home.component.html',
+  styleUrls: [
+    './layout.scss',
+    './top-buttons.scss',
+    './settings.scss',
+    './buttons.scss',
+    './search.scss',
+    './search-input.scss',
+    './fonts/icons.scss',
+    './gallery.scss',
+    './wizard-button.scss',
+    './wizard.scss',
+    './resolution.scss',
+    './rightclick.scss'
+  ],
+  animations: [
+    donutAppear,
+    filterItemAppear,
+    galleryItemAppear,
+    historyItemRemove,
+    modalAnimation,
+    myWizardAnimation,
+    overlayAppear,
+    rightClickAnimation,
+    rightClickContentAnimation,
+    slowFadeIn,
+    slowFadeOut,
+    topAnimation
+  ]
+})
+export class HomeComponent implements OnInit, AfterViewInit {
+
+  @ViewChild('magicSearch') magicSearch: ElementRef;
+  @ViewChild('renameFileInput') renameFileInput: ElementRef;
+  @ViewChild('searchRef') searchRef: ElementRef;
+
+  // used to grab the `scrollable-content` element - background of gallery for right-click
+  galleryBackgroundRef: any;
+
+  @ViewChild(VirtualScrollerComponent)
+  virtualScroller: VirtualScrollerComponent;
+
+  defaultSettingsButtons = {};
+  settingsButtons = SettingsButtons;
+  settingsButtonsGroups = SettingsButtonsGroups;
+  settingsMetaGroup = SettingsMetaGroup;
+  settingsMetaGroupLabels = SettingsMetaGroupLabels;
+  settingToShow = 0;
+
+  filters = Filters;
+
+  // App state to save -- so it can be exported and saved when closing the app
+  appState = AppState;
+
+  // ========================================================================================
+  // ***************************** BUILD TOGGLE *********************************************
+  // ========================================================================================
+  demo = false;
+  webDemo = false;
+  macVersion = false;
+  // !!! make sure to update the `globals.version` and the `package.json` version numbers !!!
+  // ========================================================================================
+
+  versionNumber = globals.version;
+
+  // REORGANIZE / keep
+  currentPlayingFile = '';
+  currentPlayingFolder = '';
+  magicSearchString = '';
+
+  progressPercent = 0;
+  canCloseWizard = false;
+
+  appMaximized = false;
+
+  imgHeight: ImageHeights = defaultHeights;
+
+  currentViewImgHeight: number = 144;
+
+  progressNum1 = 0;
+  progressNum2 = 100;
+
+  myTimeout = null;
+
+  buttonsInView = false;
+
+  // temp
+  wordFreqArr: any;
+  currResults: any = { showing: 0, total: 0 };
+
+  // stuff to do with frequency
+  resolutionFreqArr: number[];
+  freqLeftBound: number = 0;
+  freqRightBound: number = 4;
+  resolutionNames: ResolutionString[] = ['SD', '720', '1080', '4K'];
+
+  // stuff to do with star filter
+  starRatingFreqArr: number[];
+  starLeftBound: number = 0;
+  starRightBound: number = 6;
+  starRatingNames: string[] = ['N/A', '1', '2', '3', '4', '5'];
+  forceStarFilterUpdate: boolean = true;
+
+  // other
+  lengthLeftBound: number = 0;
+  lengthRightBound: number = Infinity;
+
+  rightClickShowing: boolean = false;
+  itemToRename: any; // strongly type this -- it's an element from finalArray !!!
+  renamingWIP: string; // ngModel for renaming file
+  renamingExtension: string;
+
+  findMostSimilar: string; // for finding similar files to this one
+
+  showSimilar: boolean = false; // to toggle the similarity pipe
+
+  // for text padding below filmstrip or thumbnail element
+  textPaddingHeight: number;
+  previewWidth: number;
+
+  public finalArray: ImageElement[] = [];
+
+  finalArrayNeedsSaving: boolean = false; // if ever a file was renamed, re-save the .vha file
+
+  vhaFileHistory: HistoryItem[] = [];
+
+  fullPathToCurrentFile = '';
+
+  shuffleTheViewNow = 0; // dummy number to force re-shuffle current view
+
+  hubNameToRemember = '';
+  importStage = 0;
+
+  // temp variables for the wizard during import
+  wizard: WizardOptions = {
+    futureHubName: '',
+    listOfFiles: [],
+    screensPerVideo: true,
+    screenshotSizeForImport: 288,
+    selectedOutputFolder: '',
+    selectedSourceFolder: '',
+    showWizard: false,
+    ssConstant: 10,
+    ssVariable: 5,
+    totalImportSize: 0,
+    totalImportTime: 0,
+    totalNumberOfFiles: -1,
+  };
+
+  extractionPercent = 1;
+
+  flickerReduceOverlay = true;
+
+  progressString = '';
+
+  // RENAMING FUNCTIONALITY
+
+  currentRightClickedItem: any; // element from FinalArray
+  renamingNow: boolean = false;
+
+  clickedOnFile: boolean; // whether right-clicked on file or gallery background
+
+  rightClickPosition: any = { x: 0, y: 0 };
+
+  nodeRenamingFile: boolean = false;
+  renameErrMsg: string = '';
+
+  // Thumbnail Sheet Display
+  sheetDisplay: boolean = false;
+  itemToDisplay: ImageElement;
+
+  // WIP
+
+  sortType: SortType = 'default';
+
+  manualTagFilterString: string = '';
+  manualTagShowFrequency: boolean = true;
+
+  isFirstRunEver = false;
+
+  galleryWidth: number;
+  longest: number = 0;
+
+  rootFolderLive: boolean = true; // set to `false` when loading hub but video folder is not connected
+
+  // Listen for key presses
+  @HostListener('document:keydown', ['$event'])
+  handleKeyboardEvent(event: KeyboardEvent) {
+    // .metaKey is for mac `command` button
+    if (event.ctrlKey === true || event.metaKey) {
+      if (event.key === 's') {
+        this.shuffleTheViewNow++;
+      } else if (event.key === 'o') {
+        if (this.wizard.showWizard === false) {
+          this.toggleSettings();
+        }
+      } else if (event.key === 'f') {
+        if (this.settingsButtons['file'].toggled === false) {
+          this.settingsButtons['file'].toggled = true;
+        }
+        this.showSidebar();
+        setTimeout(() => {
+          if (this.searchRef.nativeElement.children.file) {
+            // focus on the search !!!
+            this.searchRef.nativeElement.children.file.focus();
+          }
+        }, 1);
+      } else if (event.key === 'n') {
+        this.startWizard();
+        this.buttonsInView = false;
+      } else if (event.key === 'd') {
+        this.toggleButton('darkMode');
+      } else if (event.key === 'q') {
+        event.preventDefault();
+        event.stopPropagation();
+        this.initiateClose();
+      } else if (event.key === 'z') {
+        this.toggleButton('makeSmaller');
+      } else if (event.key === 'x') {
+        this.toggleButton('makeLarger');
+      } else if (event.key === 't') {
+        this.toggleButton('showTags');
+      } else if (event.key === '1') {
+        this.toggleButton('showThumbnails');
+      } else if (event.key === '2') {
+        this.toggleButton('showFilmstrip');
+      } else if (event.key === '3') {
+        this.toggleButton('showFiles');
+      } else if (event.key === '4') {
+        this.toggleButton('showClips');
+      } else if (event.key === 'h') {
+        this.toggleButton('hideTop');
+        this.toggleButton('hideSidebar');
+        this.toggleSettingsMenu();
+        this.toggleButton('showMoreInfo');
+      } else if (event.key === 'a') {
+        this.toggleButton('hideSidebar');
+      } else if (event.key === 'q') {
+        if (!this.settingsButtons['magic'].toggled) {
+          this.settingsButtons['magic'].toggled = true;
+        }
+        this.showSidebar();
+        setTimeout(() => {
+          this.magicSearch.nativeElement.focus();
+        }, 1);
+      }
+    } else if (event.key === 'Escape' && this.wizard.showWizard === true && this.canCloseWizard === true) {
+      this.wizard.showWizard = false;
+    } else if (event.key === 'Escape' && this.buttonsInView) {
+      this.buttonsInView = false;
+    } else if (event.key === 'Escape' && (this.rightClickShowing || this.renamingNow || this.sheetDisplay)) {
+      this.rightClickShowing = false;
+      this.renamingNow = false;
+      this.sheetDisplay = false;
+    } else if (event.key === 'Escape' && this.settingsButtons['showTags'].toggled) {
+      this.toggleButton('showTags');
+    }
+  }
+
+  @HostListener('window:resize')
+  handleResizeEvent() {
+    this.debounceUpdateMax();
+  }
+
+  @HostListener('window:click')
+  handleWindowClick() {
+    if (this.rightClickShowing) {
+      this.rightClickShowing = false;
+    }
+  }
+
+  constructor(
+    public cd: ChangeDetectorRef,
+    public electronService: ElectronService,
+    public manualTagsService: ManualTagsService,
+    public resolutionFilterService: ResolutionFilterService,
+    public starFilterService: StarFilterService,
+    public showLimitService: ShowLimitService,
+    public tagsSaveService: AutoTagsSaveService,
+    public translate: TranslateService,
+    public wordFrequencyService: WordFrequencyService,
+    private elementRef: ElementRef
+  ) { }
+
+  ngOnInit() {
+    this.translate.setDefaultLang('en');
+    this.changeLanguage('en');
+
+    // enable right-clicking of the gallery
+    setTimeout(() => {
+      // `.scrollable-content` is css on an element generated by Virtual Scroll
+      this.galleryBackgroundRef = this.elementRef.nativeElement.querySelector('.scrollable-content');
+      this.galleryBackgroundRef.addEventListener('contextmenu', (event) => {
+        this.rightMouseClicked(event, null);
+      });
+    }, 1000);
+
+    // To test the progress bar
+    // setInterval(() => {
+    //   this.importStage = this.importStage === 2 ? 1 : 2;
+    // }, 3000);
+
+    // To test the progress bar
+    // setInterval(() => {
+    //   this.extractionPercent = this.extractionPercent + 8;
+    //   if (this.extractionPercent > 99) {
+    //     this.extractionPercent = 1;
+    //   }
+    // }, 2000);
+
+    this.cloneDefaultButtonSetting();
+
+    setTimeout(() => {
+      this.wordFrequencyService.finalMapBehaviorSubject.subscribe((value) => {
+        this.wordFreqArr = value;
+        // this.cd.detectChanges();
+      });
+      this.resolutionFilterService.finalResolutionMapBehaviorSubject.subscribe((value) => {
+        this.resolutionFreqArr = value;
+        // this.cd.detectChanges();
+      });
+      this.starFilterService.finalStarMapBehaviorSubject.subscribe((value) => {
+        this.starRatingFreqArr = value;
+        // this.cd.detectChanges();
+      });
+      this.showLimitService.searchResults.subscribe((value) => {
+        this.currResults = value;
+        this.cd.detectChanges();
+        this.debounceUpdateMax(10);
+      });
+
+      // if (this.webDemo) {
+      //   const finalObject = DemoContent;
+      //   // TODO -- MAYBE ???? UPDATE SINCE THE BELOW HAS BEEN UPDATED
+      //   // identical to `finalObjectReturning`
+      //   this.appState.numOfFolders = finalObject.numOfFolders;
+      //   // DEMO CONTENT -- CONFIRM THAT IT WORKS !!!
+      //   this.appState.selectedOutputFolder = 'images';
+      //   this.appState.selectedSourceFolder = finalObject.inputDir;
+      //   this.canCloseWizard = true;
+      //   this.wizard.showWizard = false;
+      //   this.finalArray = finalObject.images;
+      //   setTimeout(() => {
+      //     this.toggleButton('showThumbnails');
+      //   }, 1000);
+      // }
+
+    }, 100);
+
+    // Returning Input
+    this.electronService.ipcRenderer.on('inputFolderChosen', (event, filePath, listOfFiles) => {
+      this.wizard.totalNumberOfFiles = listOfFiles.length;
+      this.wizard.listOfFiles = listOfFiles;
+      // TODO better prediction
+
+      if (listOfFiles.length > 0) {
+        this.wizard.totalImportTime = Math.round(listOfFiles.length * 2.25 / 60);
+        this.wizard.selectedSourceFolder = filePath;
+        this.wizard.selectedOutputFolder = filePath;
+      }
+    });
+
+    // Rename file response
+    this.electronService.ipcRenderer.on('renameFileResponse', (event, success: boolean, errMsg?: string) => {
+      this.nodeRenamingFile = false;
+
+      if (success) {
+        // UPDATE THE FINAL ARRAY !!!
+        this.replaceOriginalFileName();
+        this.closeRename();
+      } else {
+        this.renameErrMsg = errMsg;
+      }
+    });
+
+    // Returning Output
+    this.electronService.ipcRenderer.on('outputFolderChosen', (event, filePath) => {
+      this.wizard.selectedOutputFolder = filePath;
+    });
+
+    // Happens if a file with the same hub name already exists in the directory
+    this.electronService.ipcRenderer.on('pleaseFixHubName', (event) => {
+      this.importStage = 0;
+    });
+
+    // Progress bar messages
+    // for META EXTRACTION
+    // stage = 0 hides progress bar
+    // stage = 1 shows meta progress
+    // stage = 2 shows jpg progress
+    this.electronService.ipcRenderer.on('processingProgress', (event, a: number, b: number, stage: number) => {
+      this.importStage = stage;
+      this.progressNum1 = a;
+      this.progressNum2 = b;
+      this.progressPercent = a / b;
+      this.progressString = 'loading - ' + Math.round(a * 100 / b) + '%';
+      if (this.importStage === 2) {
+        if (this.isFirstRunEver) {
+          this.toggleButton('showThumbnails');
+          console.log('SHOULD FIX THE FIRST RUN BUG!!!');
+          this.isFirstRunEver = false;
+        }
+        this.extractionPercent = Math.round(100 * a / b);
+      }
+      if (a === b) {
+        this.extractionPercent = 1;
+        this.importStage = 0;
+        this.appState.hubName = this.hubNameToRemember; // could this cause bugs ??? TODO: investigate!
+      }
+    });
+
+    // Final object returns
+    this.electronService.ipcRenderer.on('finalObjectReturning', (
+      event,
+      finalObject: FinalObject,
+      pathToFile: string,
+      outputFolderWithTrailingSlash: string,
+      changedRootFolder: boolean = false,
+      rootFolderLive: boolean = true,
+    ) => {
+      this.rootFolderLive = rootFolderLive;
+      this.finalArrayNeedsSaving = changedRootFolder;
+      this.appState.currentVhaFile = pathToFile;
+      this.hubNameToRemember = finalObject.hubName;
+      this.appState.hubName = finalObject.hubName;
+      this.appState.numOfFolders = finalObject.numOfFolders;
+      this.appState.selectedOutputFolder = outputFolderWithTrailingSlash;
+      this.appState.selectedSourceFolder = finalObject.inputDir;
+
+      // Update history of opened files
+      this.updateVhaFileHistory(pathToFile, finalObject.inputDir, finalObject.hubName);
+
+      this.setTags(finalObject.addTags, finalObject.removeTags);
+      this.manualTagsService.populateManualTagsService(finalObject.images);
+
+      this.finalArray = this.demo ? finalObject.images.slice(0, 50) : finalObject.images;
+
+      this.canCloseWizard = true;
+      this.wizard.showWizard = false;
+      this.flickerReduceOverlay = false;
+
+      this.finalArray.forEach((element: ImageElement): void => {
+        this.longest = Math.max(element.duration, this.longest);
+      });
+      // round to nearest 60 seconds
+      this.longest = Math.ceil(this.longest / 60) * 60;
+    });
+
+    // Returning settings
+    this.electronService.ipcRenderer.on('settingsReturning', (
+      event,
+      settingsObject: SettingsObject,
+      userWantedToOpen: string,
+      locale: string
+    ) => {
+      this.vhaFileHistory = (settingsObject.vhaFileHistory || []);
+      this.restoreSettingsFromBefore(settingsObject);
+      this.setOrRestoreLanguage(settingsObject.appState.language, locale);
+      if (this.appState.currentZoomLevel !== 1) {
+        this.electronService.webFrame.setZoomFactor(this.appState.currentZoomLevel);
+      }
+      if (userWantedToOpen) {
+        this.loadThisVhaFile(userWantedToOpen);
+      } else if (settingsObject.appState.currentVhaFile) {
+        this.loadThisVhaFile(settingsObject.appState.currentVhaFile);
+      } else {
+        this.wizard.showWizard = true;
+        this.flickerReduceOverlay = false;
+      }
+    });
+
+    this.electronService.ipcRenderer.on('pleaseOpenWizard', (event, firstRun) => {
+      // Correlated with the first time ever starting the app !!!
+      // Can happen when no settings present
+      // Can happen when trying to open a .vha file that no longer exists
+      if (firstRun) {
+        this.firstRunLogic();
+      }
+      this.wizard.showWizard = true;
+      this.flickerReduceOverlay = false;
+    });
+
+    this.justStarted();
+  }
+
+  ngAfterViewInit() {
+    this.updateGalleryWidthMeasurement(); // so that fullView knows its size
+    // this is required, otherwise when user drops the file, it opens as plaintext
+    document.ondragover = document.ondrop = (ev) => {
+      ev.preventDefault();
+    };
+    document.body.ondrop = (ev) => {
+      if (ev.dataTransfer.files.length > 0) {
+        const fullPath = ev.dataTransfer.files[0].path;
+        ev.preventDefault();
+        if (fullPath.slice(-4) === '.vha') {
+          this.electronService.ipcRenderer.send(
+            'load-this-vha-file', ev.dataTransfer.files[0].path, this.saveVhaIfNeeded()
+          );
+        }
+      }
+    };
+  }
+
+  /**
+   * Low-tech debounced scroll handler
+   * @param msDelay - number of milliseconds to debounce; if absent sets to 250ms
+   */
+  public debounceUpdateMax(msDelay?: number): void {
+    // console.log('debouncing');
+    const delay = msDelay !== undefined ? msDelay : 250;
+    clearTimeout(this.myTimeout);
+    this.myTimeout = setTimeout(() => {
+      // console.log('Virtual scroll refreshed');
+      this.virtualScroller.refresh();
+      if (this.appState.currentView === 'showFullView') {
+        this.updateGalleryWidthMeasurement();
+      }
+    }, delay);
+  }
+
+  /**
+   * Only allow characters and numbers for hub name
+   * @param event key press event
+   */
+  public validateHubName(event: any) {
+    const keyCode = event.charCode;
+    if (keyCode === 32) {
+      return true;
+    } else if (48 <= keyCode && keyCode <= 57) {
+      return true;
+    } else if (65 <= keyCode && keyCode <= 90) {
+      return true;
+    } else if (97 <= keyCode && keyCode <= 122) {
+      return true;
+    }
+    return false;
+  }
+
+  // ---------------- INTERACT WITH ELECTRON ------------------ //
+
+  /**
+   * Send initial `hello` message
+   * triggers function that grabs settings and sends them back with `settingsReturning`
+   */
+  public justStarted(): void {
+    this.electronService.ipcRenderer.send('just-started', 'lol');
+  }
+
+  public loadThisVhaFile(fullPath: string): void {
+    this.electronService.ipcRenderer.send('load-this-vha-file', fullPath, this.saveVhaIfNeeded());
+  }
+
+  public loadFromFile(): void {
+    this.electronService.ipcRenderer.send('system-open-file-through-modal', 'lol');
+  }
+
+  public selectSourceDirectory(): void {
+    this.electronService.ipcRenderer.send('choose-input', 'lol');
+  }
+
+  public selectOutputDirectory(): void {
+    this.electronService.ipcRenderer.send('choose-output', 'lol');
+  }
+
+  public importFresh(): void {
+    this.appState.selectedSourceFolder = this.wizard.selectedSourceFolder;
+    this.appState.selectedOutputFolder = this.wizard.selectedOutputFolder;
+    this.importStage = 1;
+    const importOptions: ImportSettingsObject = {
+      exportFolderPath: this.wizard.selectedOutputFolder,
+      hubName: (this.wizard.futureHubName || 'untitled'),
+      imgHeight: this.wizard.screenshotSizeForImport,
+      ssVariable: this.wizard.ssVariable,
+      ssConstant: this.wizard.ssConstant,
+      screensPerVideo: this.wizard.screensPerVideo,
+      videoDirPath: this.wizard.selectedSourceFolder
+    };
+    this.electronService.ipcRenderer.send('start-the-import', importOptions, this.wizard.listOfFiles);
+  }
+
+  public cancelCurrentImport(): void {
+    this.importStage = 0;
+    this.electronService.ipcRenderer.send('cancel-current-import');
+  }
+
+  public initiateMinimize(): void {
+    this.electronService.ipcRenderer.send('minimize-window', 'lol');
+  }
+
+  public initiateMaximize(): void {
+    if (this.appMaximized === false) {
+      this.electronService.ipcRenderer.send('maximize-window', 'lol');
+      this.appMaximized = true;
+    } else {
+      this.electronService.ipcRenderer.send('un-maximize-window', 'lol');
+      this.appMaximized = false;
+    }
+  }
+
+  public initiateClose(): void {
+    this.appState.imgHeight = this.imgHeight;
+    this.electronService.ipcRenderer.send('close-window', this.getSettingsForSave(), this.saveVhaIfNeeded());
+  }
+
+  /**
+   * Returns the finalArray if needed, otherwise returns `null`
+   * completely depends on global variable `finalArrayNeedsSaving`
+   */
+  public saveVhaIfNeeded(): SavableProperties {
+    if (this.finalArrayNeedsSaving || this.tagsSaveService.needToSave()) {
+      const propsToReturn: SavableProperties = {
+        addTags: this.tagsSaveService.getAddTags(),
+        removeTags: this.tagsSaveService.getRemoveTags(),
+        images: this.finalArray
+      };
+      return propsToReturn;
+    } else {
+      return null;
+    }
+  }
+
+  public handleClick(event: MouseEvent, item: ImageElement) {
+    // ctrl/cmd + click for thumbnail sheet
+    if (event.ctrlKey === true || event.metaKey) {
+      this.openThumbnailSheet(item);
+    } else {
+      this.openVideo(item.index);
+    }
+  }
+
+  /**
+   * Open the video with user's default media player
+   * @param index unique ID of the video
+   */
+  public openVideo(index): void {
+    this.currentPlayingFolder = this.finalArray[index].partialPath;
+    this.currentPlayingFile = this.finalArray[index].cleanName;
+    this.finalArray[index].timesPlayed ? this.finalArray[index].timesPlayed++ : this.finalArray[index].timesPlayed = 1;
+    this.finalArrayNeedsSaving = true;
+    const fullPath = this.appState.selectedSourceFolder + this.finalArray[index].partialPath + '/' + this.finalArray[index].fileName;
+    this.fullPathToCurrentFile = fullPath;
+    console.log(fullPath);
+    if (this.rootFolderLive) {
+      this.electronService.ipcRenderer.send('openThisFile', fullPath);
+    }
+  }
+
+  public openOnlineHelp(): void {
+    this.electronService.ipcRenderer.send('pleaseOpenUrl', 'https://www.videohubapp.com');
+  }
+
+  public increaseZoomLevel(): void {
+    if (this.appState.currentZoomLevel < 2.5) {
+      this.appState.currentZoomLevel = this.appState.currentZoomLevel + 0.1;
+      this.electronService.webFrame.setZoomFactor(this.appState.currentZoomLevel);
+    }
+  }
+
+  public decreaseZoomLevel(): void {
+    if (this.appState.currentZoomLevel > 0.6) {
+      this.appState.currentZoomLevel = this.appState.currentZoomLevel - 0.1;
+      this.electronService.webFrame.setZoomFactor(this.appState.currentZoomLevel);
+    }
+  }
+
+  public resetZoomLevel(): void {
+    if (this.appState.currentZoomLevel !== 1) {
+      this.appState.currentZoomLevel = 1;
+      this.electronService.webFrame.setZoomFactor(this.appState.currentZoomLevel);
+    }
+  }
+
+  // -----------------------------------------------------------------------------------------------
+  // handle output from top.component
+
+  /**
+   * Add filter to FILE search when word in file is clicked
+   * @param filter
+   */
+  handleFileWordClicked(filter: string, event?): void {
+    this.showSidebar();
+    if (event && event.shiftKey) { // Shift click to exclude
+      if (!this.settingsButtons['tagExclusion'].toggled) {
+        this.settingsButtons['tagExclusion'].toggled = true;
+      }
+      this.onEnterKey(filter, 7); // 7th item is the `tag` exlcude filter
+    } else {
+      if (!this.settingsButtons['tagIntersection'].toggled) {
+        this.settingsButtons['tagIntersection'].toggled = true;
+      }
+      this.onEnterKey(filter, 6); // 6th item is the `tag` filter
+    }
+  }
+
+  /**
+   * Add filter to FOLDER search when word in folder is clicked
+   * @param filter
+   */
+  handleFolderWordClicked(filter: string): void {
+    if (this.settingsButtons['showFoldersOnly']) {
+      this.toggleButton('showFiles'); // needed when we're in folder view
+    }
+    this.showSidebar();
+    if (!this.settingsButtons['folder'].toggled) {
+      this.settingsButtons['folder'].toggled = true;
+    }
+    this.onEnterKey(filter, 1); // 1st item is the `folder` filter
+  }
+
+  openInExplorer(): void {
+    console.log('should open explorer');
+    this.electronService.ipcRenderer.send('openInExplorer', this.fullPathToCurrentFile);
+  }
+
+  /**
+   * Show sidebar if it's closed
+   */
+  showSidebar(): void {
+    if (this.settingsButtons['hideSidebar'].toggled) {
+      this.toggleButton('hideSidebar');
+      this.updateGalleryWidthMeasurement();
+    }
+  }
+
+  // -----------------------------------------------------------------------------------------------
+  // Interaction functions
+
+  /**
+   * Add this file to the recently opened list
+   * @param file full path to file name
+   */
+  updateVhaFileHistory(pathToVhaFile: string, pathToVideos: string, hubName: string): void {
+
+    const newHistoryItem = {
+      vhaFilePath: pathToVhaFile,
+      videoFolderPath: pathToVideos,
+      hubName: (hubName || 'untitled')
+    };
+
+    let matchFound = false;
+
+    (this.vhaFileHistory || []).forEach((element: any, index: number) => {
+      if (element.vhaFilePath === pathToVhaFile) {
+        matchFound = true;
+        // remove from current position
+        this.vhaFileHistory.splice(index, 1);
+        this.vhaFileHistory.splice(0, 0, newHistoryItem);
+      }
+    });
+
+    if (!matchFound) {
+      // TODO -- use slice -- this is reall really dumb!
+      this.vhaFileHistory.reverse();
+      this.vhaFileHistory.push(newHistoryItem);
+      this.vhaFileHistory.reverse();
+    }
+
+    // console.log('CURRENT HISTORY OF VHA FILES');
+    // console.log(this.vhaFileHistory);
+  }
+
+  /**
+   * Handle click from html to open a recently-opened VHA file
+   * @param index - index of the file from `vhaFileHistory`
+   */
+  openFromHistory(index: number): void {
+    // console.log('trying to open ' + index);
+    // console.log(this.vhaFileHistory[index]);
+    this.loadThisVhaFile(this.vhaFileHistory[index].vhaFilePath);
+  }
+
+  /**
+   * Handle click from html to open a recently-opened VHA file
+   * @param index - index of the file from `vhaFileHistory`
+   */
+  removeFromHistory(event: Event, index: number): void {
+    event.stopPropagation();
+    // console.log('trying to remove ' + index);
+    // console.log(this.vhaFileHistory[index]);
+    this.vhaFileHistory.splice(index, 1);
+  }
+
+  /**
+   * Clear out the recently-viewed history
+   */
+  clearRecentlyViewedHistory(): void {
+    this.vhaFileHistory = [];
+  }
+
+  /**
+   * Show or hide settings
+   */
+  toggleSettings(): void {
+    this.settingToShow = 2;
+    this.buttonsInView = !this.buttonsInView;
+  }
+
+  hideWizard(): void {
+    this.wizard.showWizard = false;
+  }
+
+  tagClicked(event: string): void {
+    this.filters[3].array = []; // clear search array
+    this.handleFileWordClicked(event);
+    this.toggleButton('showTags'); // close the modal
+  }
+
+  /**
+   * Toggles all views buttons off
+   * A helper function for `toggleBotton`
+   */
+  toggleAllViewsButtonsOff(): void {
+    this.settingsButtons['showClips'].toggled = false;
+    this.settingsButtons['showDetails'].toggled = false;
+    this.settingsButtons['showFiles'].toggled = false;
+    this.settingsButtons['showFilmstrip'].toggled = false;
+    this.settingsButtons['showFoldersOnly'].toggled = false;
+    this.settingsButtons['showFullView'].toggled = false;
+    this.settingsButtons['showThumbnails'].toggled = false;
+  }
+
+  /**
+   * Helper method for `toggleButton` to set `toggled` boolean true
+   * @param uniqueKey
+   */
+  toggleButtonTrue(uniqueKey: string): void {
+    this.settingsButtons[uniqueKey].toggled = true;
+  }
+
+  /**
+   * Helper method for `toggleButton` to set `toggled` boolean to its opposite
+   * @param uniqueKey
+   */
+  toggleButtonOpposite(uniqueKey: string): void {
+    this.settingsButtons[uniqueKey].toggled = !this.settingsButtons[uniqueKey].toggled;
+  }
+
+  /**
+   * Save the current view image size
+   */
+  savePreviousViewSize(): void {
+    this.imgHeight[this.appState.currentView] = this.currentViewImgHeight;
+  }
+
+  /**
+   * Restore the image height for the particular view
+   */
+  restoreViewSize(view: string): void {
+    this.currentViewImgHeight = this.imgHeight[view];
+  }
+
+  /**
+   * Perform appropriate action when a button is clicked
+   * @param   uniqueKey   the uniqueKey string of the button
+   */
+  toggleButton(uniqueKey: string | SupportedView): void {
+    // ======== View buttons ================
+    if (allSupportedViews.includes(<SupportedView>uniqueKey)) {
+      this.savePreviousViewSize();
+      this.toggleAllViewsButtonsOff();
+      this.toggleButtonTrue(uniqueKey);
+      this.restoreViewSize(uniqueKey);
+      if (uniqueKey === 'showFoldersOnly') {
+        this.appState.currentView = 'showFiles';
+      } else {
+        this.appState.currentView = <SupportedView>uniqueKey;
+      }
+      this.computeTextBufferAmount();
+      this.scrollToTop();
+
+    // ======== Filter buttons =========================
+    } else if (FilterKeyNames.includes(uniqueKey)) {
+      this.filters[filterKeyToIndex[uniqueKey]].array = [];
+      this.filters[filterKeyToIndex[uniqueKey]].bool = !this.filters[filterKeyToIndex[uniqueKey]].bool;
+      this.toggleButtonOpposite(uniqueKey);
+    } else if (uniqueKey === 'magic') {
+      this.magicSearchString = '';
+      this.toggleButtonOpposite(uniqueKey);
+
+    // ======== Other buttons ========================
+    } else if (uniqueKey === 'makeSmaller') {
+      this.decreaseSize();
+      this.updateGalleryWidthMeasurement();
+    } else if (uniqueKey === 'makeLarger') {
+      this.increaseSize();
+      this.updateGalleryWidthMeasurement();
+    } else if (uniqueKey === 'startWizard') {
+      this.startWizard();
+    } else if (uniqueKey === 'clearHistory') {
+      this.clearRecentlyViewedHistory();
+    } else if (uniqueKey === 'resetSettings') {
+      this.resetSettingsToDefault();
+    } else if (uniqueKey === 'importNewFiles') {
+      this.importNewFiles();
+    } else if (uniqueKey === 'verifyThumbnails') {
+      this.verifyThumbnails();
+    } else if (uniqueKey === 'rescanDirectory') {
+      this.rescanDirectory();
+    } else if (uniqueKey === 'regenerateLibrary') {
+      this.regenerateLibrary();
+    } else if (uniqueKey === 'sortOrder') {
+      this.sortType = 'default';
+      this.toggleButtonOpposite(uniqueKey);
+    } else if (uniqueKey === 'shuffleGalleryNow') {
+      this.shuffleTheViewNow++;
+    } else if (uniqueKey === 'randomizeGallery') {
+      if (this.settingsButtons['randomizeGallery'].toggled === true) {
+        this.shuffleTheViewNow = 0;
+      }
+      this.toggleButtonOpposite(uniqueKey);
+    } else {
+      this.toggleButtonOpposite(uniqueKey);
+      if (uniqueKey === 'showMoreInfo') {
+        this.computeTextBufferAmount();
+      }
+      if (uniqueKey === 'hideSidebar') {
+        setTimeout(() => {
+          this.virtualScroller.refresh();
+          this.updateGalleryWidthMeasurement();
+        }, 300);
+      }
+    }
+  }
+
+  public showSettingsGroup(group: number): void {
+    this.settingToShow = group;
+  }
+
+  /**
+   * Complex logic to see if we should shuffle things!
+   */
+  public shouldWeShuffle(): void {
+    if (this.settingsButtons['randomizeGallery'].toggled === true) {
+      this.shuffleTheViewNow++;
+    } else {
+      this.shuffleTheViewNow = 0;
+    }
+  }
+
+  /**
+   * scroll to the top of the gallery
+   */
+  public scrollToTop(): void {
+    document.getElementById('scrollDiv').scrollTop = 0;
+  }
+
+  /**
+   * Start the wizard again
+   */
+  public startWizard(): void {
+    this.wizard = {
+      futureHubName: '',
+      listOfFiles: [],
+      screensPerVideo: true,
+      screenshotSizeForImport: 288, // default
+      selectedOutputFolder: '',
+      selectedSourceFolder: '',
+      showWizard: true,
+      ssConstant: 3,
+      ssVariable: 10,
+      totalImportSize: 0,
+      totalImportTime: 0,
+      totalNumberOfFiles: -1,
+    };
+    this.toggleSettings();
+  }
+
+  /**
+   * Scan for new files and import them
+   */
+  public importNewFiles(): void {
+    this.progressNum1 = 0;
+    this.importStage = 1;
+    this.toggleSettings();
+    console.log('scanning for new files');
+    this.electronService.ipcRenderer.send('import-new-files', this.finalArray);
+  }
+
+  /**
+   * Verify all files have thumbnails
+   */
+  public verifyThumbnails(): void {
+    this.progressNum1 = 0;
+    this.importStage = 2;
+    this.toggleSettings();
+    console.log('verifying thumbnails');
+    this.electronService.ipcRenderer.send('verify-thumbnails', this.finalArray);
+  }
+
+  /**
+   * Rescan the current input directory
+   */
+  public rescanDirectory(): void {
+    this.progressNum1 = 0;
+    this.importStage = 1;
+    this.toggleSettings();
+    console.log('rescanning');
+    this.electronService.ipcRenderer.send('rescan-current-directory', this.finalArray);
+  }
+
+  /**
+   * Regenerate the library
+   */
+  public regenerateLibrary(): void {
+    this.progressNum1 = 0;
+    this.importStage = 1;
+    this.toggleSettings();
+    console.log('regenerating library');
+    this.electronService.ipcRenderer.send('regenerate-library', this.finalArray);
+  }
+
+  /**
+   * Decrease preview size
+   */
+  public decreaseSize(): void {
+    if (this.currentViewImgHeight > 100) {
+      this.currentViewImgHeight = this.currentViewImgHeight - 36;
+    }
+    this.computePreviewWidth();
+  }
+
+  /**
+   * Increase preview size
+   */
+  public increaseSize(): void {
+    if (this.currentViewImgHeight < 500) {
+      this.currentViewImgHeight = this.currentViewImgHeight + 36;
+    }
+    this.computePreviewWidth();
+  }
+
+  /**
+   * Computes the preview width for thumbnails view
+   */
+  public computePreviewWidth(): void {
+    if (   this.appState.currentView === 'showClips'
+        || this.appState.currentView === 'showThumbnails'
+        || this.appState.currentView === 'showDetails') {
+      this.previewWidth = this.currentViewImgHeight * (16 / 9);
+    }
+  }
+
+  /**
+   * Compute and update the galleryWidth
+   */
+  public updateGalleryWidthMeasurement(): void {
+    this.galleryWidth = document.getElementById('scrollDiv').getBoundingClientRect().width;
+  }
+
+  /**
+   * Compute the number of pixels needed to add to the preview item
+   * Thumbnails need more space for the text
+   * Filmstrip needs less
+   */
+  public computeTextBufferAmount(): void {
+    this.computePreviewWidth();
+    if (this.appState.currentView === 'showThumbnails') {
+      if (this.settingsButtons.showMoreInfo.toggled) {
+        this.textPaddingHeight = 55;
+      } else {
+        this.textPaddingHeight = 20;
+      }
+    } else if (this.appState.currentView === 'showFilmstrip') {
+      if (this.settingsButtons.showMoreInfo.toggled) {
+        this.textPaddingHeight = 20;
+      } else {
+        this.textPaddingHeight = 0;
+      }
+    } else if (this.appState.currentView === 'showFiles') {
+      this.textPaddingHeight = 20;
+    } else if (this.appState.currentView === 'showClips') {
+      if (this.settingsButtons.showMoreInfo.toggled) {
+        this.textPaddingHeight = 55;
+      } else {
+        this.textPaddingHeight = 20;
+      }
+    }
+    // console.log('textPaddingHeight = ' + this.textPaddingHeight);
+  }
+
+  magicSearchChanged(event): void {
+    this.shouldWeShuffle();
+  }
+
+  /**
+   * Add search string to filter array
+   * When user presses the `ENTER` key
+   * @param value  -- the string to filter
+   * @param origin -- number in filter array of the filter to target
+   */
+  onEnterKey(value: string, origin: number): void {
+    let trimmed = value.trim();
+    // removes '/' from folder path if there
+    // happens when user clicks folder path in file view
+    if (trimmed[0] === '/' || trimmed[0] === '\\') {
+      trimmed = trimmed.substr(1);
+    }
+    if (trimmed) {
+      // don't include duplicates
+      if (!this.filters[origin].array.includes(trimmed)) {
+        this.filters[origin].array.push(trimmed);
+        this.filters[origin].bool = !this.filters[origin].bool;
+        this.filters[origin].string = '';
+      }
+    }
+    this.scrollToTop();
+    this.shouldWeShuffle();
+  }
+
+  /**
+   * Removes last-added filter
+   * When user presses the `BACKSPACE` key
+   * @param origin  -- array from which to .pop()
+   */
+  onBackspace(value: string, origin: number): void {
+    if (value === '' && this.filters[origin].array.length > 0) {
+      this.filters[origin].array.pop();
+      this.filters[origin].bool = !this.filters[origin].bool;
+    }
+    this.shouldWeShuffle();
+  }
+
+  /**
+   * Removes item from particular search array
+   * When user clicks on a particular search word
+   * @param item    {number}  index within array of search strings
+   * @param origin  {number}  index within filters array
+   */
+  removeThisFilter(item: number, origin: number): void {
+    this.filters[origin].array.splice(item, 1);
+    this.filters[origin].bool = !this.filters[origin].bool;
+    this.shouldWeShuffle();
+  }
+
+  /**
+   * Toggle the visibility of the settings button
+   * @param item  -- index within the searchButtons array to toggle
+   */
+  toggleHideButton(item: string): void {
+    this.settingsButtons[item].hidden = !this.settingsButtons[item].hidden;
+  }
+
+  /**
+   * Show or hide the settings menu
+   */
+  toggleSettingsMenu(): void {
+    this.appState.menuHidden = !this.appState.menuHidden;
+  }
+
+  /**
+   * Called on screenshot size dropdown select
+   * @param pxHeightForImport - string of number of pixels for the height of each screenshot
+   */
+  selectScreenshotSize(pxHeightForImport: string): void {
+    const height = parseInt(pxHeightForImport, 10);
+    this.wizard.screenshotSizeForImport = height;
+    // TODO better prediction
+    this.wizard.totalImportSize = Math.round((height / 100) * this.wizard.totalNumberOfFiles * 36 / 1000);
+  }
+
+  /**
+   * Called on screenshot size dropdown select
+   * @param screens - string of number of screenshots per video
+   */
+  selectNumOfScreens(screens: string): void {
+    if (this.wizard.screensPerVideo) {
+      this.wizard.ssConstant = parseFloat(screens);
+    } else {
+      this.wizard.ssVariable = parseFloat(screens);
+    }
+  }
+
+  /**
+   * Sets the `screensPerVideo` boolean
+   * true = N screenshots per video
+   * false = 1 screenshot per N minutes
+   * @param bool boolean
+   */
+  setScreensPerVideo(bool: boolean): void {
+    this.wizard.screensPerVideo = bool;
+  }
+
+  // ---- HANDLE EXTRACTING AND RESTORING SETTINGS ON OPEN AND BEFORE CLOSE ------
+
+  /**
+   * Prepare and return the settings object for saving
+   * happens right before closing the app !!!
+   */
+  getSettingsForSave(): any {
+
+    const buttonSettings = {};
+
+    this.grabAllSettingsKeys().forEach(element => {
+      buttonSettings[element] = {};
+      buttonSettings[element].toggled = this.settingsButtons[element].toggled;
+      buttonSettings[element].hidden = this.settingsButtons[element].hidden;
+    });
+
+    // console.log(buttonSettings);
+    return {
+      appState: this.appState,
+      buttonSettings: buttonSettings,
+      vhaFileHistory: this.vhaFileHistory,
+    };
+  }
+
+  /**
+   * Return all keys from the settings-buttons
+   */
+  grabAllSettingsKeys(): string[] {
+    const objectKeys: string[] = [];
+
+    this.settingsButtonsGroups.forEach(element => {
+      element.forEach(key => {
+        objectKeys.push(key);
+      });
+    });
+
+    // console.log(objectKeys);
+    return(objectKeys);
+  }
+
+  /**
+   * Restore settings to their default values
+   */
+  resetSettingsToDefault(): void {
+    this.settingsButtons = JSON.parse(JSON.stringify(this.defaultSettingsButtons));
+  }
+
+  /**
+   * Clone default settings in case user wants to reset them later
+   */
+  cloneDefaultButtonSetting(): void {
+    this.defaultSettingsButtons = JSON.parse(JSON.stringify(this.settingsButtons));
+  }
+
+  /**
+   * restore settings from saved file
+   */
+  restoreSettingsFromBefore(settingsObject: SettingsObject): void {
+    if (settingsObject.appState) {
+      this.appState = settingsObject.appState;
+      if (!settingsObject.appState.currentZoomLevel) {  // catch error <-- old VHA apps didn't have `currentZoomLevel`
+        this.appState.currentZoomLevel = 1;
+      }
+    }
+    this.imgHeight = this.appState.imgHeight;
+    this.grabAllSettingsKeys().forEach(element => {
+      if (settingsObject.buttonSettings[element]) {
+        this.settingsButtons[element].toggled = settingsObject.buttonSettings[element].toggled;
+        this.settingsButtons[element].hidden = settingsObject.buttonSettings[element].hidden;
+      }
+    });
+    this.computeTextBufferAmount();
+    this.settingsButtons['showTags'].toggled = false; // never show tags on load (they don't load right anyway)
+  }
+
+  /**
+   * Restore the language from settings or try to set it from the user's locale
+   * @param storedSetting the `language` attribute in AppState
+   * @param locale the string that comes from `app.getLocale()`
+   * List of locales is here: https://github.com/electron/electron/blob/master/docs/api/locales.md
+   */
+  setOrRestoreLanguage(chosenLanguage: SupportedLanguage, locale: string): void {
+    if (chosenLanguage) {
+      this.changeLanguage(chosenLanguage);
+    } else {
+      this.changeLanguage(<any>locale.substring(0, 2));
+    }
+  }
+
+  /**
+   * Update the min and max resolution for the resolution filter
+   * @param selection
+   */
+  newResFilterSelected(selection: number[]): void {
+    this.freqLeftBound = selection[0];
+    this.freqRightBound = selection[1];
+  }
+
+  /**
+   * Update the min and max star rating for the star filter
+   * @param selection
+   */
+  newStarFilterSelected(selection: number[]): void {
+    this.starLeftBound = selection[0];
+    this.starRightBound = selection[1];
+  }
+
+  /*
+   * Update the min and max resolution for the resolution filter
+   * @param selection
+   */
+  newLengthFilterSelected(selection: number[]): void {
+    this.lengthLeftBound = selection[0];
+    this.lengthRightBound = selection[1];
+  }
+
+  clearLev(): void {
+    this.showSimilar = false;
+  }
+
+  /**
+   * Handle right-click and `Show similar`
+   */
+  showSimilarNow(): void {
+    this.findMostSimilar = this.currentRightClickedItem.cleanName;
+    console.log(this.findMostSimilar);
+    this.showSimilar = true;
+  }
+
+  /**
+   * handle right-click and `Open folder`
+   * Code similar to `openVideo()`
+   */
+  openContainingFolderNow(): void {
+    this.fullPathToCurrentFile = this.appState.selectedSourceFolder +
+                                 this.currentRightClickedItem.partialPath +
+                                 '/' +
+                                 this.currentRightClickedItem.fileName;
+
+    this.openInExplorer();
+  }
+
+  /**
+   * Handle right-click on file and `view folder`
+   */
+  showOnlyThisFolderNow(): void {
+    this.handleFolderWordClicked(this.currentRightClickedItem.partialPath);
+  }
+
+  rightMouseClicked(event: MouseEvent, item): void {
+
+    event.stopPropagation(); // so that the gallery background event listener (`scrollable-content`) doesn't fire
+
+    if (item === null) {
+      this.clickedOnFile = false;
+    } else {
+      this.clickedOnFile = true;
+    }
+
+    const winWidth: number = window.innerWidth;
+    const clientX: number = event.clientX;
+    const howFarFromRight: number = winWidth - clientX;
+
+    // handle top-offset if clicking close to the bottom
+    const winHeight: number = window.innerHeight;
+    const clientY: number = event.clientY;
+    const howFarFromBottom: number = winHeight - clientY;
+
+    this.rightClickPosition.x = (howFarFromRight < 120) ? clientX - 120 + (howFarFromRight) : clientX;
+    this.rightClickPosition.y = (howFarFromBottom < 140) ? clientY - 140 + (howFarFromBottom) : clientY;
+
+    this.currentRightClickedItem = item;
+    this.rightClickShowing = true;
+  }
+
+  /**
+   * Opens the thumbnail sheet for the selected video
+   */
+  openThumbnailSheet(item: ImageElement): void {
+    this.itemToDisplay = item;
+    this.sheetDisplay = true;
+  }
+
+  /**
+   * Opens rename file modal, prepares all the name and extension
+   */
+  openRenameFileModal(): void {
+    // prepare file name without extension:
+    this.renameErrMsg = '';
+    const item = this.currentRightClickedItem;
+
+    // .slice() creates a copy
+    const fileName = item.fileName.slice().substr(0, item.fileName.lastIndexOf('.'));
+    const extension = item.fileName.slice().split('.').pop();
+
+    this.renamingWIP = fileName;
+    this.renamingExtension = extension;
+
+    this.itemToRename = item;
+    this.renamingNow = true;
+
+    setTimeout(() => {
+      this.renameFileInput.nativeElement.focus();
+    }, 0);
+  }
+
+  /**
+   * Close the thumbnail sheet
+   */
+  closeSheetDisplay() {
+    this.sheetDisplay = false;
+  }
+
+  /**
+   * Close the rename dialog
+   */
+  closeRename() {
+    this.renamingNow = false;
+  }
+
+  /**
+   * Attempt to rename file
+   * check for simple errors locally
+   * ask Node to perform rename after
+   */
+  attemptToRename() {
+    this.nodeRenamingFile = true;
+    this.renameErrMsg = '';
+
+    const sourceFolder = this.appState.selectedSourceFolder;
+    const relativeFilePath = this.currentRightClickedItem.partialPath;
+    const originalFile = this.currentRightClickedItem.fileName;
+    const newFileName = this.renamingWIP + '.' + this.renamingExtension;
+    // check if different first !!!
+    if (originalFile === newFileName) {
+      this.renameErrMsg = 'RIGHTCLICK.errorMustBeDifferent';
+      this.nodeRenamingFile = false;
+    } else if (this.renamingWIP.length === 0 ) {
+      this.renameErrMsg = 'RIGHTCLICK.errorMustNotBeEmpty';
+      this.nodeRenamingFile = false;
+    } else {
+      // try renaming
+      this.electronService.ipcRenderer.send(
+        'try-to-rename-this-file',
+        sourceFolder,
+        relativeFilePath,
+        originalFile,
+        newFileName
+      );
+    }
+  }
+
+  /**
+   * Searches through the `finalArray` and updates the file name and display name
+   * TODO -- BUG?!?? -- check if this errors out when hub has two files with duplicate file names !!!
+   */
+  replaceOriginalFileName(): void {
+    const oldFileName = this.currentRightClickedItem.fileName;
+
+    for (let i = 0; i < this.finalArray.length; i++) {
+      if (this.finalArray[i].fileName === oldFileName) {
+        this.finalArray[i].fileName = this.renamingWIP + '.' + this.renamingExtension;
+        this.finalArray[i].cleanName = this.renamingWIP;
+        break;
+      }
+    }
+
+    this.finalArrayNeedsSaving = true;
+  }
+
+  /**
+   * For ternary in `home.component` template when right-clicking on folder instead of file
+   */
+  doNothing(): void {
+    // do nothing
+  }
+
+  /**
+   * Add and remove tags from the AutoTagsSaveService
+   * triggered on vha file load
+   * @param addTags
+   * @param removeTags
+   */
+  setTags(addTags: string[], removeTags: string[]): void {
+    this.tagsSaveService.restoreSavedTags(
+      addTags ? addTags : [],
+      removeTags ? removeTags : []
+    );
+  }
+
+  /**
+   * Change the language via ngx-translate
+   * `en` is the default
+   * @param language
+   */
+  changeLanguage(language: SupportedLanguage): void {
+    switch (language) {
+      case 'ru':
+        this.translate.use('ru');
+        this.translate.setTranslation('ru', Russian );
+        this.appState.language = 'ru';
+        break;
+      case 'fr':
+        this.translate.use('fr');
+        this.translate.setTranslation('fr', French );
+        this.appState.language = 'fr';
+        break;
+      default:
+        this.translate.use('en');
+        this.translate.setTranslation('en', English );
+        this.appState.language = 'en';
+        break;
+    }
+  }
+
+  /**
+   * Run when user starts the app for the first time
+   * Gets triggered when the settings.json is missing from the app folder
+   */
+  firstRunLogic(): void {
+    console.log('WELCOME TO VIDEO HUB APP!');
+    console.log('this is the first time you are running this app');
+    this.isFirstRunEver = true;
+  }
+
+  /**
+   * Add tag to a particular file
+   * @param emission - the type, tag, and uniqe ID of the file (hash)
+   */
+  editFinalArrayTag(emission: TagEmission): void {
+    // console.log(emission);
+    const position: number = emission.index;
+
+    if (emission.type === 'add') {
+      if (this.finalArray[position].tags) {
+        this.finalArray[position].tags.push(emission.tag);
+      } else {
+        this.finalArray[position].tags = [emission.tag];
+      }
+    } else {
+      console.log('removing tag!');
+      this.finalArray[position].tags.splice(this.finalArray[position].tags.indexOf(emission.tag), 1);
+    }
+
+    this.finalArrayNeedsSaving = true;
+  }
+
+  /**
+   * Update FinalArray with new star rating for some element
+   * @param emission
+   */
+  editFinalArrayStars(emission: StarEmission): void {
+    const position: number = emission.index;
+    this.finalArray[position].stars = emission.stars;
+    this.finalArrayNeedsSaving = true;
+    this.forceStarFilterUpdate = !this.forceStarFilterUpdate;
+  }
+
+  /**
+   * Update FinalArray with new year tag for some element
+   * @param emission
+   */
+  editFinalArrayYear(emission: YearEmission): void {
+    const position: number = emission.index;
+    this.finalArray[position].year = emission.year;
+    this.finalArrayNeedsSaving = true;
+  }
+
+  /**
+   * Select a particular sort order (star rating, number of times played, etc)
+   * @param type
+   */
+  selectFilterOrder(type: SortType): void {
+    console.log(type);
+    this.sortType = type;
+    // this.shuffleTheViewNow++;
+  }
+
+
+}

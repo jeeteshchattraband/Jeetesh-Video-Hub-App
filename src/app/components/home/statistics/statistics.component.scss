@@ -1,0 +1,41 @@
+@import "../variables";
+
+.statistics {
+  font-size: 12px;
+}
+
+.stats-table {
+  margin: 10px auto;
+  font-size: 14px;
+  min-width: 240px;
+}
+
+.stats-heading {
+  color: #666666;
+  display: block;
+  font-size: 14px;
+  margin-top: 20px;
+  text-align: center;
+}
+
+.title {
+  color: $black;
+  font-weight: bold;
+}
+
+.folder {
+  font-style: italic;
+  margin-top: 10px;
+}
+
+.rightCol {
+  padding: 3px 10px;
+  text-align: right;
+}
+
+.spanBoth {
+  font-weight: bold;
+  padding-top: 20px;
+  padding-bottom: 5px;
+  text-align: center;
+}

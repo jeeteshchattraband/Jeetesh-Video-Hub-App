@@ -1,0 +1,53 @@
+<div
+  class="element-container"
+>
+
+  <div *ngIf="video.cleanName === '***'; else fileNameBlock">
+    <app-icon [icon]="'icon-folder-blank'" class="icon-folder-lol"></app-icon>
+    <span
+      [innerHtml]="video.partialPath | folderArrowsPipe : true"
+      [ngStyle]="{ color: darkMode ? '#999999' : '#333333' }"
+      class="folder-name"
+    ></span>
+  </div>
+
+  <ng-template #fileNameBlock>
+
+    <div
+      *ngIf="showMeta"
+      [ngStyle]="{ color: darkMode ? '#555555' : '#BBBBBB' }"
+      class="size"
+    >
+      {{ video.resolution }}
+    </div>
+
+    <div
+      class="title"
+      [ngStyle]="{
+          width: 'calc(100% - ' + (showMeta ? '65px' : '10px') + ')',
+          margin: showMeta ? '0 30px' : '0 10px',
+          color: darkMode ? '#777777' : '#444444'
+        }"
+      [ngClass]="{ 'larger-font': largerFont }"
+    >
+      {{ video.cleanName }}
+      <div
+        *ngIf="showMeta"
+        [ngStyle]="{ color: darkMode ? '#555555' : '#666666' }"
+        class="fileSize"
+      >
+        ({{ video.fileSizeDisplay }})
+      </div>
+    </div>
+
+    <div
+      *ngIf="showMeta"
+      [ngStyle]="{ color: darkMode ? '#555555' : '#BBBBBB' }"
+      class="length"
+    >
+      {{ video.durationDisplay }}
+    </div>
+
+  </ng-template>
+
+</div>

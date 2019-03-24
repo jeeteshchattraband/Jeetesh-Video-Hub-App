@@ -1,0 +1,64 @@
+<div
+  (mouseleave)="mouseLeft()"
+  (mousemove)="mouseIsMoving($event)"
+  (mouseup)="mouseIsUp()"
+  class="frequencySliders"
+>
+
+  <div
+    class="sliderBackTrack"
+    [ngClass]="{ darkMode: darkMode }"
+  ></div>
+
+  <div
+    class="leftSide"
+    [ngStyle]="{ width: currentXleft + 'px' }"
+    [ngClass]="{ darkMode: darkMode }"
+  >
+    <div
+      (mousedown)="leftSideClick($event)"
+      [ngClass]="{
+        isDragging: draggingLeft,
+        draggerDarkMode: darkMode
+       }"
+      class="dragger"
+    >
+    </div>
+  </div>
+
+  <div
+    class="rightSide"
+    [ngStyle]="{ width: currentXright + 'px' }"
+    [ngClass]="{ darkMode: darkMode }"
+  >
+    <div
+      (mousedown)="rightSideClick($event)"
+      [ngClass]="{
+        isDragging: draggingRight,
+        draggerDarkMode: darkMode
+      }"
+      class="dragger"
+    >
+    </div>
+  </div>
+  <span
+    *ngIf="showLabels"
+    class="leftLabel"
+    [ngStyle]="{
+      left: ((currentXleft > 35) ? currentXleft - 35 : 0) + 'px'
+    }"
+    >
+    {{ convertToIndex(currentXleft) | wrapperPipe : labelFormatPipe }}
+  </span>
+  <span
+    *ngIf="showLabels"
+    class="rightLabel"
+    [ngStyle]="{
+      right: 160 - ((currentXright < 125) ? currentXright + 35 : 160) + 'px'
+    }"
+  >
+    {{ convertToIndex(currentXright) | wrapperPipe : labelFormatPipe }}
+  </span>
+  <span *ngIf="showLabels" class="minLabel">0 min</span>
+  <span *ngIf="showLabels" class="maxLabel">{{ maximumValue | wrapperPipe : labelFormatPipe }}</span>
+</div>
